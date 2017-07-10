@@ -7,8 +7,8 @@
     the MIT license as written in the LICENSE file.
 *******************************************************************************/
 
-#include <webgl_pakua.h>
 #include <taichi/util.h>
+#include <taichi/visualization/pakua.h>
 
 TC_NAMESPACE_BEGIN
 
@@ -17,16 +17,16 @@ using Vector = VectorND<3, real>;
 class PakuaDemo : public Task {
     void run() override {
         printf("Pakua demo starts.\n");
-        WebglPakua p;
+        std::shared_ptr<Pakua> p = create_instance<Pakua>("webgl");
         Config config;
         config.set("port", 9563);
-        p.initialize(config);
+        p->initialize(config);
         while (1) {
-            p.start();
+            p->start();
             for (int i = 0; i < 10; i++) {
-                p.add_particle(Vector::rand(), Vector::rand());
+                p->add_particle(Vector::rand(), Vector::rand());
             }
-            p.finish();
+            p->finish();
         }
     }
 };
