@@ -55,6 +55,29 @@
 			animate();
 
 			function init() {
+			    buildWebsocketClient();
+
+                var ws = new WebSocket('ws://localhost:9563/');
+
+                ws.binaryType = 'arraybuffer';
+
+                ws.onopen = function(evt) {
+                    console.log('Connection open ...');
+                    ws.send('Hello WebSockets!');
+                };
+
+                ws.onmessage = function(evt) {
+                    console.log('Received Message Size: ' + evt.data.size);
+                    console.log('Received Message Type: ' + evt.data.type);
+					var data = new Float32Array(evt.data);
+					console.log(data[0]);
+					console.log(data[1]);
+                    ws.close();
+                };
+
+                ws.onclose = function(evt) {
+                    console.log('Connection closed.');
+                };
 
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
@@ -138,10 +161,15 @@
 			var theta = 0;
 
 			function render() {
-
+			    // update particles
+                scene.traverse( function( node ) {
+                    if ( node instanceof THREE.Sprite ) {
+						node.position.x *= 0.8;
+                    }
+                } );
 				// rotate camera
 
-				theta += 0.1;
+				// theta += 0.1;
 
 				camera.position.x = radius * Math.sin( THREE.Math.degToRad( theta ) );
 				camera.position.y = radius * Math.sin( THREE.Math.degToRad( theta ) );

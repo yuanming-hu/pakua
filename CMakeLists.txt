@@ -21,6 +21,7 @@ include(${TAICHI_CMAKE_DIR}/TaichiCXXFlags.cmake)
 message(${CMAKE_CXX_FLAGS})
 
 include_directories(${TAICHI_INCLUDE_DIR})
+include_directories(external/include)
 include_directories(include)
-set(SOURCE_FILES server.cpp)
+set(SOURCE_FILES webgl_pakua.cpp)
 add_executable(pakua ${SOURCE_FILES})
