@@ -15,6 +15,7 @@
 #include <set>
 #include <mutex>
 #include <vector>
+#include <taichi/visualization/pakua.h>
 
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
@@ -27,14 +28,14 @@ typedef std::set<connection_hdl,std::owner_less<connection_hdl> > con_list;
 // pull out the type of messages sent by our config
 typedef server::message_ptr message_ptr;
 
-class PakuaServer {
+TC_NAMESPACE_BEGIN
 
+class WebglPakua : public Pakua {
     server echo_server;
-    std::vector<float> buffer;
-    std::mutex buffer_mutex;
+    std::vector<float> echo_buffer;
+    std::vector<float> echo_buffer_cache;
+    std::mutex echo_mutex;
 
-
-    // Define a callback to handle incoming messages
     void on_message(connection_hdl hdl, message_ptr msg) {
         std::cout << "on_message called with hdl: " << hdl.lock().get()
                   << " and message: " << msg->get_payload()
@@ -43,11 +44,10 @@ class PakuaServer {
 //            echo_server.stop_listening();
 //            return;
 //        }
-
         try {
-            buffer_mutex.lock();
-            echo_server.send(hdl, &buffer[0], buffer.size() * sizeof(float), websocketpp::frame::opcode::binary);
-            buffer_mutex.unlock();
+            echo_mutex.lock();
+            echo_server.send(hdl, &echo_buffer[0], echo_buffer.size() * sizeof(float), websocketpp::frame::opcode::binary);
+            echo_mutex.unlock();
         } catch (const websocketpp::lib::error_code &e) {
             std::cout << "Echo failed because: " << e
                       << "(" << e.message() << ")" << std::endl;
@@ -60,23 +60,12 @@ class PakuaServer {
             // Set logging settings
             echo_server.set_access_channels(websocketpp::log::alevel::all);
             echo_server.clear_access_channels(websocketpp::log::alevel::frame_payload);
-
-            std::cout << "Initializing ASIO..." << std::endl;
             echo_server.init_asio();
-
-            //            echo_server.set_open_handler(bind(&PakuaServer::on_open, this, ::_1));
-            //            echo_server.set_close_handler(bind(&PakuaServer::on_close, this, ::_1));
-            echo_server.set_message_handler(bind(&PakuaServer::on_message, this, ::_1, ::_2));
+            echo_server.set_message_handler(bind(&WebglPakua::on_message, this, ::_1, ::_2));
             echo_server.listen(port);
-
             echo_server.start_accept();
-
             std::cout << "Running ..." << std::endl;
-
             echo_server.run();
-
-            std::cout << "Exit." << std::endl;
-
         } catch (websocketpp::exception const &e) {
             std::cout << e.what() << std::endl;
         } catch (...) {
@@ -84,54 +73,33 @@ class PakuaServer {
         }
     }
 
-public:
 
-    void run(int port) {
-        std::thread t(&PakuaServer::loop_body, this, port);
-        t.detach();
-    }
-
-    void load_buffer(const std::vector<float>& buffer_data) {
-        buffer_mutex.lock();
-        buffer.clear();
-        for (auto &data : buffer_data) {
-            buffer.push_back(data);
-        }
-        buffer_mutex.unlock();
-    }
-};
-
-#include <thread>
-#include <taichi/visualization/pakua.h>
-
-TC_NAMESPACE_BEGIN
-
-class WebglPakua : public Pakua {
-    std::vector<float> pakua_buffer;
-    PakuaServer pakua_server;
 public:
     void initialize(const Config &config) {
         Pakua::initialize(config);
-        pakua_server.run(config.get_int("port"));
+        std::thread t(&WebglPakua::loop_body, this, config.get_int("port"));
+        t.detach();
         printf("WebGL Pakua Server start.\n");
     }
 
     void add_particle(Vector pos, Vector color) {
         // Add a particle to buffer
-        pakua_buffer.push_back(pos.x);
-        pakua_buffer.push_back(pos.y);
-        pakua_buffer.push_back(pos.z);
-        pakua_buffer.push_back(color.x);
-        pakua_buffer.push_back(color.y);
-        pakua_buffer.push_back(color.z);
+        echo_buffer_cache.push_back(pos.x);
+        echo_buffer_cache.push_back(pos.y);
+        echo_buffer_cache.push_back(pos.z);
+        echo_buffer_cache.push_back(color.x);
+        echo_buffer_cache.push_back(color.y);
+        echo_buffer_cache.push_back(color.z);
     }
 
     void start() {
     }
 
     void finish() {
-        pakua_server.load_buffer(pakua_buffer);
-        pakua_buffer.clear();
+        echo_mutex.lock();
+        echo_buffer.swap(echo_buffer_cache);
+        echo_mutex.unlock();
+        echo_buffer_cache.clear();
     }
 };
 
