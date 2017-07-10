@@ -13,12 +13,13 @@
 #include <websocketpp/server.hpp>
 #include <thread>
 #include <set>
+#include <mutex>
 #include <vector>
 
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
-using websocketpp::connection_hdl;
 using websocketpp::lib::bind;
+using websocketpp::connection_hdl;
 
 typedef websocketpp::server<websocketpp::config::asio> server;
 typedef std::set<connection_hdl,std::owner_less<connection_hdl> > con_list;
@@ -29,39 +30,32 @@ typedef server::message_ptr message_ptr;
 class PakuaServer {
 
     server echo_server;
-    con_list echo_connections;
+    std::vector<float> buffer;
+    std::mutex buffer_mutex;
 
-    void on_open(connection_hdl hdl) {
-        echo_connections.insert(hdl);
-    }
-
-    void on_close(connection_hdl hdl) {
-        echo_connections.erase(hdl);
-    }
 
     // Define a callback to handle incoming messages
     void on_message(connection_hdl hdl, message_ptr msg) {
         std::cout << "on_message called with hdl: " << hdl.lock().get()
                   << " and message: " << msg->get_payload()
                   << std::endl;
-
-        // check for a special command to instruct the server to stop listening so
-        // it can be cleanly exited.
-        if (msg->get_payload() == "stop-listening") {
-            echo_server.stop_listening();
-            return;
-        }
+//        if (msg->get_payload() == "stop-listening") {
+//            echo_server.stop_listening();
+//            return;
+//        }
 
         try {
-            echo_server.send(hdl, msg->get_payload(), msg->get_opcode());
+            buffer_mutex.lock();
+            echo_server.send(hdl, &buffer[0], buffer.size() * sizeof(float), websocketpp::frame::opcode::binary);
+            buffer_mutex.unlock();
         } catch (const websocketpp::lib::error_code &e) {
             std::cout << "Echo failed because: " << e
                       << "(" << e.message() << ")" << std::endl;
         }
+
     }
 
-public:
-    void init(int port) {
+    void loop_body(int port) {
         try {
             // Set logging settings
             echo_server.set_access_channels(websocketpp::log::alevel::all);
@@ -70,8 +64,8 @@ public:
             std::cout << "Initializing ASIO..." << std::endl;
             echo_server.init_asio();
 
-            echo_server.set_open_handler(bind(&PakuaServer::on_open, this, ::_1));
-            echo_server.set_close_handler(bind(&PakuaServer::on_close, this, ::_1));
+            //            echo_server.set_open_handler(bind(&PakuaServer::on_open, this, ::_1));
+            //            echo_server.set_close_handler(bind(&PakuaServer::on_close, this, ::_1));
             echo_server.set_message_handler(bind(&PakuaServer::on_message, this, ::_1, ::_2));
             echo_server.listen(port);
 
@@ -88,16 +82,21 @@ public:
         } catch (...) {
             std::cout << "other exception" << std::endl;
         }
-
     }
 
-    void send(std::vector<float> buffer) {
-        auto send_lambda = [&](const std::vector<float>& buffer) {
-            for (auto it = echo_connections.begin(); it != echo_connections.end(); ++it) {
-                echo_server.send(*it, &buffer, buffer.size() * sizeof(float), websocketpp::frame::opcode::binary);
-            }
-        };
-        std::thread t(send_lambda, buffer);
-        t.join();
+public:
+
+    void run(int port) {
+        std::thread t(&PakuaServer::loop_body, this, port);
+        t.detach();
+    }
+
+    void load_buffer(const std::vector<float>& buffer_data) {
+        buffer_mutex.lock();
+        buffer.clear();
+        for (auto &data : buffer_data) {
+            buffer.push_back(data);
+        }
+        buffer_mutex.unlock();
     }
 };

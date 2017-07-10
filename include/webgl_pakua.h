@@ -10,6 +10,7 @@
 #pragma once
 
 #include <server.h>
+#include <thread>
 #include <taichi/visualization/pakua.h>
 
 TC_NAMESPACE_BEGIN
@@ -18,6 +19,12 @@ class WebglPakua : public Pakua{
     std::vector<float> pakua_buffer;
     PakuaServer pakua_server;
 public:
+    void initialize(const Config &config) {
+        Pakua::initialize(config);
+        pakua_server.run(config.get_int("port"));
+        printf("WebGL Pakua Server start.\n");
+    }
+
     void add_particle(Vector pos, Vector color) {
         // Add a particle to buffer
         pakua_buffer.push_back(pos.x);
@@ -32,7 +39,7 @@ public:
     }
 
     void finish() {
-        pakua_server.send(pakua_buffer);
+        pakua_server.load_buffer(pakua_buffer);
         pakua_buffer.clear();
     }
 };

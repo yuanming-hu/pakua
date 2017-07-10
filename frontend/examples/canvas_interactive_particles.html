@@ -1,213 +1,206 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>three.js canvas - interactive particles</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<style>
-			body {
-				font-family: Monospace;
-				background-color: #f0f0f0;
-				margin: 0px;
-				overflow: hidden;
-			}
-		</style>
-	</head>
-	<body>
+<head>
+	<title>PAKUA</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+		body {
+			font-family: Monospace;
+			background-color: #f0f0f0;
+			margin: 0px;
+			overflow: hidden;
+		}
+	</style>
+</head>
+<body>
 
-		<script src="../build/three.js"></script>
+<script src="../build/three.js"></script>
 
-		<script src="js/renderers/Projector.js"></script>
-		<script src="js/renderers/CanvasRenderer.js"></script>
+<script src="js/renderers/Projector.js"></script>
+<script src="js/renderers/CanvasRenderer.js"></script>
 
-		<script src="js/libs/stats.min.js"></script>
+<script src="js/libs/stats.min.js"></script>
 
-		<script>
+<script>
 
-			var container, stats;
-			var camera, scene, renderer;
+    var container, stats;
+    var camera, scene, renderer;
 
-			var raycaster;
-			var mouse;
+    var raycaster;
+    var mouse;
 
-			var PI2 = Math.PI * 2;
+    var PI2 = Math.PI * 2;
 
-			var programFill = function ( context ) {
+    var programFill = function ( context ) {
 
-				context.beginPath();
-				context.arc( 0, 0, 0.5, 0, PI2, true );
-				context.fill();
+        context.beginPath();
+        context.arc( 0, 0, 0.5, 0, PI2, true );
+        context.fill();
 
-			};
+    };
 
-			var programStroke = function ( context ) {
+    var programStroke = function ( context ) {
 
-				context.lineWidth = 0.025;
-				context.beginPath();
-				context.arc( 0, 0, 0.5, 0, PI2, true );
-				context.stroke();
+        context.lineWidth = 0.025;
+        context.beginPath();
+        context.arc( 0, 0, 0.5, 0, PI2, true );
+        context.stroke();
 
-			};
+    };
 
-			var INTERSECTED;
+    var INTERSECTED;
+    var index2id = Array();
 
-			init();
-			animate();
+    init();
+    animate();
 
-			function init() {
-			    buildWebsocketClient();
+    function init() {
+        var ws = new WebSocket('ws://localhost:9563/');
 
-                var ws = new WebSocket('ws://localhost:9563/');
+        ws.binaryType = 'arraybuffer';
 
-                ws.binaryType = 'arraybuffer';
+        ws.onopen = function(evt) {
+            console.log('Connection open ...');
+        };
 
-                ws.onopen = function(evt) {
-                    console.log('Connection open ...');
-                    ws.send('Hello WebSockets!');
-                };
+        ws.onmessage = function(evt) {
+            console.log('Connection recv ...');
 
-                ws.onmessage = function(evt) {
-                    console.log('Received Message Size: ' + evt.data.size);
-                    console.log('Received Message Type: ' + evt.data.type);
-					var data = new Float32Array(evt.data);
-					console.log(data[0]);
-					console.log(data[1]);
-                    ws.close();
-                };
+            var data = new Float32Array(evt.data);
 
-                ws.onclose = function(evt) {
-                    console.log('Connection closed.');
-                };
+            for (var i = scene.children.length - 1; i >= 0; i--) {
+                scene.remove(scene.children[i]);
+            }
 
-				container = document.createElement( 'div' );
-				document.body.appendChild( container );
+            for ( var i = 0; i < data.length; i += 6 ) {
+                var particle = new THREE.Sprite( new THREE.SpriteCanvasMaterial( { color: 0x000000, program: programStroke } ) );
+                particle.position.x = data[i] * 600 - 300;
+                particle.position.y = data[i+1] * 600 - 300;
+                particle.position.z = 0;
+                particle.scale.x = particle.scale.y = 30;
+                scene.add( particle );
+            }
+        };
 
-				var info = document.createElement( 'div' );
-				info.style.position = 'absolute';
-				info.style.top = '10px';
-				info.style.width = '100%';
-				info.style.textAlign = 'center';
-				info.innerHTML = '<a href="http://threejs.org" target="_blank" rel="noopener">three.js</a> canvas - interactive particles';
-				container.appendChild( info );
+        ws.onclose = function(evt) {
+            console.log('Connection closed.');
+        };
 
-				camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
-				camera.position.set( 0, 300, 500 );
+        container = document.createElement( 'div' );
+        document.body.appendChild( container );
 
-				scene = new THREE.Scene();
+        var info = document.createElement( 'div' );
+        info.style.position = 'absolute';
+        info.style.top = '10px';
+        info.style.width = '100%';
+        info.style.textAlign = 'center';
+        info.innerHTML = '<a href="http://threejs.org" target="_blank" rel="noopener">three.js</a> canvas - interactive particles';
+        container.appendChild( info );
 
-				for ( var i = 0; i < 100; i ++ ) {
+        camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
+        camera.position.set( 0, 300, 500 );
 
-					var particle = new THREE.Sprite( new THREE.SpriteCanvasMaterial( { color: Math.random() * 0x808080 + 0x808080, program: programStroke } ) );
-					particle.position.x = Math.random() * 800 - 400;
-					particle.position.y = Math.random() * 800 - 400;
-					particle.position.z = Math.random() * 800 - 400;
-					particle.scale.x = particle.scale.y = Math.random() * 20 + 20;
-					scene.add( particle );
+        scene = new THREE.Scene();
 
-				}
-				
-				//
-				
-				raycaster = new THREE.Raycaster();
-				mouse = new THREE.Vector2();
+        raycaster = new THREE.Raycaster();
+        mouse = new THREE.Vector2();
 
-				renderer = new THREE.CanvasRenderer();
-				renderer.setClearColor( 0xf0f0f0 );
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				container.appendChild( renderer.domElement );
+        renderer = new THREE.CanvasRenderer();
+        renderer.setClearColor( 0xf0f0f0 );
+        renderer.setPixelRatio( window.devicePixelRatio );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        container.appendChild( renderer.domElement );
 
-				stats = new Stats();
-				container.appendChild( stats.dom );
+        stats = new Stats();
+        container.appendChild( stats.dom );
 
-				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+        document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 
-				//
+        window.addEventListener( 'resize', onWindowResize, false );
 
-				window.addEventListener( 'resize', onWindowResize, false );
+        function refresh() {
+            ws.send('give me image');
+        }
 
-			}
+		setInterval(refresh, 2000);
+    }
 
-			function onWindowResize() {
 
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
+    function onWindowResize() {
 
-				renderer.setSize( window.innerWidth, window.innerHeight );
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
 
-			}
+        renderer.setSize( window.innerWidth, window.innerHeight );
 
-			function onDocumentMouseMove( event ) {
+    }
 
-				event.preventDefault();
+    function onDocumentMouseMove( event ) {
 
-				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+        event.preventDefault();
 
-			}
+        mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+        mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
-			//
+    }
 
-			function animate() {
+    //
 
-				requestAnimationFrame( animate );
+    function animate() {
 
-				render();
-				stats.update();
+        requestAnimationFrame( animate );
 
-			}
+        render();
+        stats.update();
 
-			var radius = 600;
-			var theta = 0;
+    }
 
-			function render() {
-			    // update particles
-                scene.traverse( function( node ) {
-                    if ( node instanceof THREE.Sprite ) {
-						node.position.x *= 0.8;
-                    }
-                } );
-				// rotate camera
+    var radius = 600;
+    var theta = 0;
 
-				// theta += 0.1;
+    function render() {
+        // rotate camera
 
-				camera.position.x = radius * Math.sin( THREE.Math.degToRad( theta ) );
-				camera.position.y = radius * Math.sin( THREE.Math.degToRad( theta ) );
-				camera.position.z = radius * Math.cos( THREE.Math.degToRad( theta ) );
-				camera.lookAt( scene.position );
+        // theta += 0.1;
 
-				camera.updateMatrixWorld();
+        camera.position.x = radius * Math.sin( THREE.Math.degToRad( theta ) );
+        camera.position.y = radius * Math.sin( THREE.Math.degToRad( theta ) );
+        camera.position.z = radius * Math.cos( THREE.Math.degToRad( theta ) );
+        camera.lookAt( scene.position );
 
-				// find intersections
+        camera.updateMatrixWorld();
 
-				raycaster.setFromCamera( mouse, camera );
+        // find intersections
 
-				var intersects = raycaster.intersectObjects( scene.children );
+        raycaster.setFromCamera( mouse, camera );
 
-				if ( intersects.length > 0 ) {
+        var intersects = raycaster.intersectObjects( scene.children );
 
-					if ( INTERSECTED != intersects[ 0 ].object ) {
+        if ( intersects.length > 0 ) {
 
-						if ( INTERSECTED ) INTERSECTED.material.program = programStroke;
+            if ( INTERSECTED != intersects[ 0 ].object ) {
 
-						INTERSECTED = intersects[ 0 ].object;
-						INTERSECTED.material.program = programFill;
+                if ( INTERSECTED ) INTERSECTED.material.program = programStroke;
 
-					}
+                INTERSECTED = intersects[ 0 ].object;
+                INTERSECTED.material.program = programFill;
 
-				} else {
+            }
 
-					if ( INTERSECTED ) INTERSECTED.material.program = programStroke;
+        } else {
 
-					INTERSECTED = null;
+            if ( INTERSECTED ) INTERSECTED.material.program = programStroke;
 
-				}
+            INTERSECTED = null;
 
-				renderer.render( scene, camera );
+        }
 
-			}
+        renderer.render( scene, camera );
 
-		</script>
+    }
 
-	</body>
+</script>
+
+</body>
 </html>
