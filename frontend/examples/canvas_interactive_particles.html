@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<title>PAKUA</title>
+	<title>Pakua (八卦)</title>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 	<style>
@@ -13,17 +13,15 @@
 		}
 	</style>
 </head>
-<body>
+<body style="background:#FFF0A5">
 
 <script src="../build/three.js"></script>
-
 <script src="js/renderers/Projector.js"></script>
 <script src="js/renderers/CanvasRenderer.js"></script>
-
 <script src="js/libs/stats.min.js"></script>
 
 <script>
-
+	// https://color.adobe.com/zen-and-tea-color-theme-337112/edit/?copy=true
     var container, stats;
     var camera, scene, renderer, pointGroup, lineGroup, triangleGroup;
 
@@ -82,17 +80,17 @@
                     pointGroup.remove(pointGroup.children[i]);
                 }
                 for (var i = 0; i < data.length; i += 6) {
-                    var particle = new THREE.Sprite( new THREE.SpriteCanvasMaterial( { color: 0x000000, program: programStroke } ) );
+                    var particle = new THREE.Sprite( new THREE.SpriteCanvasMaterial( { color:0x10222B, program: programStroke } ) );
                     particle.position.x = data[i] * 600 - 300;
                     particle.position.y = data[i+1] * 600 - 300;
                     particle.position.z = data[i+2] * 600 - 300;
-                    particle.scale.x = particle.scale.y = 30;
+                    particle.scale.x = particle.scale.y = 5;
                     pointGroup.add( particle );
                 }
             }
             else if (dataKind === 'line') {
                 for (var i = lineGroup.children.length - 1; i >= 0; i--) {
-                    lineGroup.remove(pointGroup.children[i]);
+                    lineGroup.remove(lineGroup.children[i]);
                 }
                 for (var i = 0; i < data.length; i += 12) {
                     var geometry = new THREE.Geometry( );
@@ -100,14 +98,14 @@
                         new THREE.Vector3(data[i] * 600 - 300, data[i+1] * 600 - 300, data[i+2] * 600 - 300),
                     	new THREE.Vector3(data[i+6] * 600 - 300, data[i+7] * 600 - 300, data[i+8] * 600 - 300)
 					);
-                    var material = new THREE.LineBasicMaterial({color: 0x0000ff, linewidth: 10});
+                    var material = new THREE.LineBasicMaterial({color: 0x468966, linewidth: 3});
                     var line = new THREE.Line( geometry, material );
                     lineGroup.add(line);
                 }
 			}
 			else if (dataKind === 'triangle') {
                 for (var i = triangleGroup.children.length - 1; i >= 0; i--) {
-                    triangleGroup.remove(pointGroup.children[i]);
+                    triangleGroup.remove(triangleGroup.children[i]);
                 }
                 for (var i = 0; i < data.length; i += 12) {
                     var geometry = new THREE.Geometry();
@@ -136,7 +134,8 @@
         info.style.top = '10px';
         info.style.width = '100%';
         info.style.textAlign = 'center';
-        info.innerHTML = '<a href="http://taichi.graphics" target="_blank" rel="noopener">taichi</a> naive monitor';
+        info.style.color = '#10222B'
+        info.innerHTML = 'Pakua - a Visualization System for Taichi';
         container.appendChild( info );
 
         camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
@@ -152,7 +151,7 @@
         mouse = new THREE.Vector2();
 
         renderer = new THREE.CanvasRenderer();
-        renderer.setClearColor( 0xf0f0f0 );
+        renderer.setClearColor( 0xF6FFE0);
         renderer.setPixelRatio( window.devicePixelRatio );
         renderer.setSize( window.innerWidth, window.innerHeight );
         container.appendChild( renderer.domElement );

@@ -43,13 +43,13 @@ class WebglPakuaServer : public Task {
 
     void on_close(connection_hdl hdl) {
         echo_connections.erase(hdl);
-        printf("There is %lu monitors.\n", echo_connections.size());
+        printf("There are %lu monitors.\n", echo_connections.size());
     }
 
     void on_message(connection_hdl hdl, message_ptr msg) {
         if (msg->get_payload() == std::string("monitor")) {
             echo_connections.insert(hdl);
-            printf("There is %lu monitors.\n", echo_connections.size());
+            printf("There are %lu monitors.\n", echo_connections.size());
         }
         else {
 //            std::string ack_msg = "ack";

@@ -60,7 +60,8 @@ public:
         echo_client.clear_access_channels(websocketpp::log::alevel::frame_payload);
         echo_client.init_asio();
         echo_client.start_perpetual();
-        echo_thread.reset(new websocketpp::lib::thread(&client::run, &echo_client));
+        auto th = new websocketpp::lib::thread(&client::run, &echo_client);
+        echo_thread.reset(th);
         printf("WebGL Pakua Client runs in new thread.\n");
         std::string uri = std::string("ws://localhost:") + std::to_string(port);
 
@@ -80,7 +81,7 @@ public:
 
     void add_line(const std::vector<Vector> &pos_v, const std::vector<Vector> &color_v) {
         int number = (int)pos_v.size();
-        for (int i = 0; i < number; i ++) {
+        for (int i = 0; i < number; i++) {
             for (int j = 0; j < 3; j++)
                 line_buffer.push_back(pos_v[i][j]);
             for (int j = 0; j < 3; j++)
@@ -90,7 +91,7 @@ public:
 
     void add_triangle(const std::vector<Vector> &pos_v, const std::vector<Vector> &color_v) {
         int number = (int)pos_v.size();
-        for (int i = 0; i < number; i ++) {
+        for (int i = 0; i < number; i++) {
             for (int j = 0; j < 3; j++)
                 triangle_buffer.push_back(pos_v[i][j]);
             for (int j = 0; j < 3; j++)
@@ -102,7 +103,7 @@ public:
     }
 
     void finish() {
-        auto send_single_kind = [&](const std::string& kind, std::vector<float>& buffer) {
+        auto send_single_kind = [&](const std::string &kind, std::vector<float> &buffer) {
             echo_client.send(data_hdl, kind, websocketpp::frame::opcode::text, echo_ec);
             CHECK_EC
             echo_client.send(data_hdl, &buffer[0], buffer.size() * sizeof(real),
