@@ -25,7 +25,7 @@
 <script>
 
     var container, stats;
-    var camera, scene, renderer;
+    var camera, scene, renderer, pointGroup, lineGroup, triangleGroup;
 
     var raycaster;
     var mouse;
@@ -62,25 +62,66 @@
 
         ws.onopen = function(evt) {
             console.log('Connection open ...');
+            ws.send("monitor");
         };
+
+        var dataKind;
 
         ws.onmessage = function(evt) {
             console.log('Connection recv ...');
 
+			if (typeof evt.data === 'string') {
+                dataKind = evt.data;
+				return;
+			}
+
             var data = new Float32Array(evt.data);
 
-            for (var i = scene.children.length - 1; i >= 0; i--) {
-                scene.remove(scene.children[i]);
+            if (dataKind === 'point') {
+                for (var i = pointGroup.children.length - 1; i >= 0; i--) {
+                    pointGroup.remove(pointGroup.children[i]);
+                }
+                for (var i = 0; i < data.length; i += 6) {
+                    var particle = new THREE.Sprite( new THREE.SpriteCanvasMaterial( { color: 0x000000, program: programStroke } ) );
+                    particle.position.x = data[i] * 600 - 300;
+                    particle.position.y = data[i+1] * 600 - 300;
+                    particle.position.z = data[i+2] * 600 - 300;
+                    particle.scale.x = particle.scale.y = 30;
+                    pointGroup.add( particle );
+                }
             }
-
-            for ( var i = 0; i < data.length; i += 6 ) {
-                var particle = new THREE.Sprite( new THREE.SpriteCanvasMaterial( { color: 0x000000, program: programStroke } ) );
-                particle.position.x = data[i] * 600 - 300;
-                particle.position.y = data[i+1] * 600 - 300;
-                particle.position.z = 0;
-                particle.scale.x = particle.scale.y = 30;
-                scene.add( particle );
-            }
+            else if (dataKind === 'line') {
+                for (var i = lineGroup.children.length - 1; i >= 0; i--) {
+                    lineGroup.remove(pointGroup.children[i]);
+                }
+                for (var i = 0; i < data.length; i += 12) {
+                    var geometry = new THREE.Geometry( );
+                    geometry.vertices.push(
+                        new THREE.Vector3(data[i] * 600 - 300, data[i+1] * 600 - 300, data[i+2] * 600 - 300),
+                    	new THREE.Vector3(data[i+6] * 600 - 300, data[i+7] * 600 - 300, data[i+8] * 600 - 300)
+					);
+                    var material = new THREE.LineBasicMaterial({color: 0x0000ff, linewidth: 10});
+                    var line = new THREE.Line( geometry, material );
+                    lineGroup.add(line);
+                }
+			}
+			else if (dataKind === 'triangle') {
+                for (var i = triangleGroup.children.length - 1; i >= 0; i--) {
+                    triangleGroup.remove(pointGroup.children[i]);
+                }
+                for (var i = 0; i < data.length; i += 12) {
+                    var geometry = new THREE.Geometry();
+                    geometry.vertices.push(
+                        new THREE.Vector3(data[i] * 600 - 300, data[i + 1] * 600 - 300, data[i + 2] * 600 - 300),
+                        new THREE.Vector3(data[i + 6] * 600 - 300, data[i + 7] * 600 - 300, data[i + 8] * 600 - 300),
+                        new THREE.Vector3(data[i + 12] * 600 - 300, data[i + 13] * 600 - 300, data[i + 14] * 600 - 300)
+                    );
+                    geometry.faces = [new THREE.Face3(0,1,2)];
+                    var material = new THREE.LineBasicMaterial({color: 0xff00ff, side: THREE.DoubleSide});
+                    var triangle = new THREE.Line(geometry, material);
+                    triangleGroup.add(triangle);
+                }
+			}
         };
 
         ws.onclose = function(evt) {
@@ -102,6 +143,10 @@
         camera.position.set( 0, 300, 500 );
 
         scene = new THREE.Scene();
+        pointGroup = new THREE.Group();
+        lineGroup = new THREE.Group();
+        triangleGroup = new THREE.Group();
+		scene.add( pointGroup, triangleGroup, lineGroup );
 
         raycaster = new THREE.Raycaster();
         mouse = new THREE.Vector2();
@@ -118,12 +163,6 @@
         document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 
         window.addEventListener( 'resize', onWindowResize, false );
-
-        function refresh() {
-            ws.send('give me image');
-        }
-
-		setInterval(refresh, 2000);
     }
 
 
