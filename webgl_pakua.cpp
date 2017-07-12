@@ -118,7 +118,7 @@ public:
             pakua_client.send(data_hdl, kind, websocketpp::frame::opcode::text, echo_ec);
             CHECK_EC
             pakua_client.send(data_hdl, &buffer[0], buffer.size() * sizeof(real),
-                             websocketpp::frame::opcode::binary, echo_ec);
+                              websocketpp::frame::opcode::binary, echo_ec);
             CHECK_EC
             buffer.clear();
         };

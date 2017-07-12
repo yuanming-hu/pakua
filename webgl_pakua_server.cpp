@@ -1,7 +1,6 @@
 /*******************************************************************************
     Taichi - Physically based Computer Graphics Library
 
-
     Copyright (c) 2017 Yu Fang <squarefk@gmail.com>
                   2017 Yuanming Hu <yuanmhu@gmail.com>
 
