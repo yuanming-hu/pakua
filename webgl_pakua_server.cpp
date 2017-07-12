@@ -52,22 +52,22 @@ class WebglPakuaServer : public Task {
     }
 
     void on_message(connection_hdl hdl, message_ptr msg) {
+        int size = 512;
         if (msg->get_payload() == std::string("monitor")) {
             monitor_connections.insert(hdl);
             printf("There are %lu monitors.\n", monitor_connections.size());
         } else if (msg->get_payload() == std::string("taichi")) {
             taichi_connections.insert(hdl);
             printf("There are %lu taichi clients.\n", taichi_connections.size());
-        } else if (msg->get_payload().substr(0, 6) == "screen") {
-            int size = 512;
+        } else if (msg->get_payload().size() == size * size * 4) {
             Array2D<Vector3> img(Vector2i(size, size));
             const std::string &str = msg->get_payload();
             for (int i = 0; i < size; i++) {
                 for (int j = 0; j < size; j++) {
-                    int r = str[(i * size + j) * 4];
-                    int g = str[(i * size + j) * 4 + 1];
-                    int b = str[(i * size + j) * 4 + 2];
-                    img[i][j] = Vector(r, g, b) * (1 / 255.f);
+                    int r = (unsigned char)str[(i * size + j) * 4];
+                    int g = (unsigned char)str[(i * size + j) * 4 + 1];
+                    int b = (unsigned char)str[(i * size + j) * 4 + 2];
+                    img[i][j] = Vector(r, g, b);
                 }
             }
             img.write("a.png");

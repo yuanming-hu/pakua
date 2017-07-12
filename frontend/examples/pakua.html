@@ -187,7 +187,6 @@
         return;
         //camera.aspect = window.innerWidth / window.innerHeight;
         //camera.updateProjectionMatrix();
-
         var size = Math.min(window.innerWidth - 20, window.innerHeight - 50);
         renderer.setSize(size, size);
     }
@@ -211,15 +210,7 @@
         var context = renderer.getContext();
 
         var img = context.getImageData(0, 0, width, height);
-        var data=img.data;
-        var buffer = new ArrayBuffer(data.length);
-        var binary = new Uint8Array(buffer);
-        dat = 'screen'
-        for (var i=0; i<binary.length; i++) {
-            dat += String.fromCharCode(Math.max(1, data[i]));
-        }
-        console.log(dat.length);
-        ws.send(dat);
+        ws.send(img.data.buffer);
     }
 
     var radius = 600;
@@ -254,11 +245,7 @@
             INTERSECTED = null;
         }
         renderer.render( scene, camera );
-
     }
-
-
-
 
 </script>
 
