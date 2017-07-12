@@ -8,6 +8,7 @@
     the MIT license as written in the LICENSE file.
 *******************************************************************************/
 
+#define _WEBSOCKETPP_CPP11_THREAD_
 #define ASIO_STANDALONE
 
 #include <websocketpp/config/asio_no_tls.hpp>
