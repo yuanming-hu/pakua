@@ -17,6 +17,7 @@
 #include <mutex>
 #include <vector>
 #include <taichi/visualization/pakua.h>
+#include <taichi/visualization/image_buffer.h>
 
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
@@ -30,14 +31,15 @@ TC_NAMESPACE_BEGIN
 
 // implement websocket client
 class WebglPakua : public Pakua {
-    client echo_client;
-    websocketpp::lib::shared_ptr<websocketpp::lib::thread> echo_thread;
+    client pakua_client;
+    websocketpp::lib::shared_ptr<websocketpp::lib::thread> client;
     websocketpp::lib::error_code echo_ec;
 
     std::vector<real> point_buffer;
     std::vector<real> line_buffer;
     std::vector<real> triangle_buffer;
     websocketpp::connection_hdl data_hdl;
+    int frame_count;
 
 #define CHECK_EC \
         if (echo_ec) { \
@@ -47,29 +49,38 @@ class WebglPakua : public Pakua {
 
 public:
     ~WebglPakua() {
-        echo_client.stop_perpetual();
-        echo_client.close(data_hdl, websocketpp::close::status::going_away, "", echo_ec);
+        pakua_client.stop_perpetual();
+        pakua_client.close(data_hdl, websocketpp::close::status::going_away, "", echo_ec);
         CHECK_EC
-        echo_thread->join();
+        client->join();
     }
 
     void initialize(const Config &config) {
         Pakua::initialize(config);
+        frame_count = 0;
         int port = config.get_int("port");
-        echo_client.clear_access_channels(websocketpp::log::alevel::frame_header);
-        echo_client.clear_access_channels(websocketpp::log::alevel::frame_payload);
-        echo_client.init_asio();
-        echo_client.start_perpetual();
-        auto th = new websocketpp::lib::thread(&client::run, &echo_client);
-        echo_thread.reset(th);
+        pakua_client.clear_access_channels(websocketpp::log::alevel::frame_header);
+        pakua_client.clear_access_channels(websocketpp::log::alevel::frame_payload);
+        pakua_client.init_asio();
+        pakua_client.start_perpetual();
+        auto th = new websocketpp::lib::thread(&client::run, &pakua_client);
+        client.reset(th);
         printf("WebGL Pakua Client runs in new thread.\n");
         std::string uri = std::string("ws://localhost:") + std::to_string(port);
 
         // establish data connection
-        client::connection_ptr data_con = echo_client.get_connection(uri.c_str(), echo_ec);
+        client::connection_ptr data_con = pakua_client.get_connection(uri.c_str(), echo_ec);
         CHECK_EC
         data_hdl = data_con->get_handle();
-        echo_client.connect(data_con);
+        pakua_client.connect(data_con);
+        pakua_client.set_message_handler(bind(&WebglPakua::on_message, this, ::_1, ::_2));
+    }
+
+    void on_message(connection_hdl hdl, message_ptr msg) {
+        if (msg->get_payload() == std::string("screen")) {
+            P("screen")
+        } else if (msg->get_payload() == std::string("taichi")) {
+        }
     }
 
     void add_point(Vector pos, Vector color) {
@@ -104,9 +115,9 @@ public:
 
     void finish() {
         auto send_single_kind = [&](const std::string &kind, std::vector<float> &buffer) {
-            echo_client.send(data_hdl, kind, websocketpp::frame::opcode::text, echo_ec);
+            pakua_client.send(data_hdl, kind, websocketpp::frame::opcode::text, echo_ec);
             CHECK_EC
-            echo_client.send(data_hdl, &buffer[0], buffer.size() * sizeof(real),
+            pakua_client.send(data_hdl, &buffer[0], buffer.size() * sizeof(real),
                              websocketpp::frame::opcode::binary, echo_ec);
             CHECK_EC
             buffer.clear();
@@ -114,6 +125,16 @@ public:
         send_single_kind("point", point_buffer);
         send_single_kind("line", line_buffer);
         send_single_kind("triangle", triangle_buffer);
+        std::vector<real> frame_id_buffer;
+        frame_id_buffer.push_back(frame_count);
+        send_single_kind("frame_id", frame_id_buffer);
+
+        frame_count += 1;
+    }
+
+    Array2D<Vector3> screenshot() {
+        pakua_client.send(data_hdl, "screenshot", websocketpp::frame::opcode::text, echo_ec);
+        CHECK_EC
     }
 
 #undef CHECK_EC

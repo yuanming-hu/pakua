@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<title>Pakua (八卦)</title>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-	<style>
+    <title>Pakua [八卦]</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
 		body {
 			font-family: Monospace;
-			background-color: #f0f0f0;
+			background-color: #0xD9D1C7;
 			margin: 0px;
 			overflow: hidden;
 		}
-	</style>
+
+
+
+    </style>
 </head>
-<body style="background:#FFF0A5">
+<body style="background:#D9D1C7">
 
 <script src="../build/three.js"></script>
 <script src="js/renderers/Projector.js"></script>
@@ -21,40 +24,41 @@
 <script src="js/libs/stats.min.js"></script>
 
 <script>
-	// https://color.adobe.com/zen-and-tea-color-theme-337112/edit/?copy=true
+	// https://color.adobe.com/Das-Boot-color-theme-189112/edit/?copy=true&base=1&rule=Custom&selected=3&name=Copy%20of%20Das%20Boot&mode=rgb&rgbvalues=0.184314,0.207843,0.25098,0.4,0.415686,0.45098,0.94902,0.929412,0.894118,0.85098,0.819608,0.780392,0.54902,0.52549,0.505882&swatchOrder=0,1,2,3,4
     var container, stats;
     var camera, scene, renderer, pointGroup, lineGroup, triangleGroup;
 
     var raycaster;
     var mouse;
-
     var PI2 = Math.PI * 2;
 
     var programFill = function ( context ) {
-
         context.beginPath();
-        context.arc( 0, 0, 0.5, 0, PI2, true );
+        context.arc( 0, 0, 2, 0, PI2, true );
         context.fill();
-
     };
 
-    var programStroke = function ( context ) {
-
-        context.lineWidth = 0.025;
+    var programStroke = function (context) {
+        context.lineWidth = 0.0;
         context.beginPath();
-        context.arc( 0, 0, 0.5, 0, PI2, true );
-        context.stroke();
-
+        context.arc( 0, 0, 2, 0, PI2, true );
+        context.fill();
     };
 
+    var width = 512, height = 512;
     var INTERSECTED;
     var index2id = Array();
 
     init();
     animate();
 
+    var ws;
+
+    var current_frame = -1;
+    var last_rendered_frame = -2;
+
     function init() {
-        var ws = new WebSocket('ws://localhost:9563/');
+        ws = new WebSocket('ws://localhost:9563/');
 
         ws.binaryType = 'arraybuffer';
 
@@ -80,11 +84,12 @@
                     pointGroup.remove(pointGroup.children[i]);
                 }
                 for (var i = 0; i < data.length; i += 6) {
-                    var particle = new THREE.Sprite( new THREE.SpriteCanvasMaterial( { color:0x10222B, program: programStroke } ) );
-                    particle.position.x = data[i] * 600 - 300;
-                    particle.position.y = data[i+1] * 600 - 300;
-                    particle.position.z = data[i+2] * 600 - 300;
-                    particle.scale.x = particle.scale.y = 5;
+                    var color = (Math.floor(data[i + 3] * 255.0) << 16) + (Math.floor(data[i + 4] * 255.0) << 8) + (Math.floor(data[i + 5] * 255.0));
+                    var particle = new THREE.Sprite(new THREE.SpriteCanvasMaterial( { color:color, program: programStroke } ) );
+                    particle.position.x = data[i];
+                    particle.position.y = data[i+1];
+                    particle.position.z = data[i+2];
+                    particle.scale.x = particle.scale.y = particle.scale.z = 1;
                     pointGroup.add( particle );
                 }
             }
@@ -93,12 +98,12 @@
                     lineGroup.remove(lineGroup.children[i]);
                 }
                 for (var i = 0; i < data.length; i += 12) {
-                    var geometry = new THREE.Geometry( );
+                    var geometry = new THREE.Geometry();
                     geometry.vertices.push(
-                        new THREE.Vector3(data[i] * 600 - 300, data[i+1] * 600 - 300, data[i+2] * 600 - 300),
-                    	new THREE.Vector3(data[i+6] * 600 - 300, data[i+7] * 600 - 300, data[i+8] * 600 - 300)
+                        new THREE.Vector3(data[i], data[i+1], data[i+2]),
+                    	new THREE.Vector3(data[i+6], data[i+7], data[i+8])
 					);
-                    var material = new THREE.LineBasicMaterial({color: 0x468966, linewidth: 3});
+                    var material = new THREE.LineBasicMaterial({color: 0x8C8681, linewidth: 4});
                     var line = new THREE.Line( geometry, material );
                     lineGroup.add(line);
                 }
@@ -110,15 +115,18 @@
                 for (var i = 0; i < data.length; i += 12) {
                     var geometry = new THREE.Geometry();
                     geometry.vertices.push(
-                        new THREE.Vector3(data[i] * 600 - 300, data[i + 1] * 600 - 300, data[i + 2] * 600 - 300),
-                        new THREE.Vector3(data[i + 6] * 600 - 300, data[i + 7] * 600 - 300, data[i + 8] * 600 - 300),
-                        new THREE.Vector3(data[i + 12] * 600 - 300, data[i + 13] * 600 - 300, data[i + 14] * 600 - 300)
+                        new THREE.Vector3(data[i], data[i + 1], data[i + 2]),
+                        new THREE.Vector3(data[i + 6], data[i + 7], data[i + 8]),
+                        new THREE.Vector3(data[i + 12], data[i + 13], data[i + 14])
                     );
                     geometry.faces = [new THREE.Face3(0,1,2)];
                     var material = new THREE.LineBasicMaterial({color: 0xff00ff, side: THREE.DoubleSide});
                     var triangle = new THREE.Line(geometry, material);
                     triangleGroup.add(triangle);
                 }
+			} else if (dataKind === 'frame_id') {
+			    current_frame = Math.floor(data[0]);
+			    console.log("current frame" + current_frame);
 			}
         };
 
@@ -127,18 +135,27 @@
         };
 
         container = document.createElement( 'div' );
+        container.style.width = '500px';
+        container.style.height = '500px';
         document.body.appendChild( container );
 
         var info = document.createElement( 'div' );
-        info.style.position = 'absolute';
+        // info.style.position = 'absolute';
         info.style.top = '10px';
         info.style.width = '100%';
         info.style.textAlign = 'center';
         info.style.color = '#10222B'
-        info.innerHTML = 'Pakua - a Visualization System for Taichi';
+        info.innerHTML = 'Pakua';
+        info.style.fontSize = '30px'
         container.appendChild( info );
 
-        camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
+        aspect_ratio = window.innerWidth / window.innerHeight
+        //w = Math.max(aspect_ratio, 1)
+        //h = Math.min(1 / aspect_ratio, 1)
+        var w, h;
+        w = 1;
+        h = 1;
+        camera = new THREE.OrthographicCamera(-w / 2 + 0.5, w / 2 + 0.5, h / 2 + 0.5, -h / 2 + 0.5, 1, 10000 );
         camera.position.set( 0, 300, 500 );
 
         scene = new THREE.Scene();
@@ -151,10 +168,11 @@
         mouse = new THREE.Vector2();
 
         renderer = new THREE.CanvasRenderer();
-        renderer.setClearColor( 0xF6FFE0);
+        renderer.setClearColor( 0xD9D1C7);
         renderer.setPixelRatio( window.devicePixelRatio );
-        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.setSize(width, height);
         container.appendChild( renderer.domElement );
+        container.style.padding = '10px';
 
         stats = new Stats();
         container.appendChild( stats.dom );
@@ -166,32 +184,42 @@
 
 
     function onWindowResize() {
+        return;
+        //camera.aspect = window.innerWidth / window.innerHeight;
+        //camera.updateProjectionMatrix();
 
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-
-        renderer.setSize( window.innerWidth, window.innerHeight );
-
+        var size = Math.min(window.innerWidth - 20, window.innerHeight - 50);
+        renderer.setSize(size, size);
     }
 
     function onDocumentMouseMove( event ) {
-
         event.preventDefault();
-
         mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
         mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-
     }
 
-    //
-
     function animate() {
-
         requestAnimationFrame( animate );
-
+        if (current_frame == last_rendered_frame) {
+            return;
+        } else {
+            last_rendered_frame = current_frame;
+        }
         render();
         stats.update();
 
+        var context = renderer.getContext();
+
+        var img = context.getImageData(0, 0, width, height);
+        var data=img.data;
+        var buffer = new ArrayBuffer(data.length);
+        var binary = new Uint8Array(buffer);
+        dat = 'screen'
+        for (var i=0; i<binary.length; i++) {
+            dat += String.fromCharCode(Math.max(1, data[i]));
+        }
+        console.log(dat.length);
+        ws.send(dat);
     }
 
     var radius = 600;
@@ -216,27 +244,21 @@
         var intersects = raycaster.intersectObjects( scene.children );
 
         if ( intersects.length > 0 ) {
-
             if ( INTERSECTED != intersects[ 0 ].object ) {
-
                 if ( INTERSECTED ) INTERSECTED.material.program = programStroke;
-
                 INTERSECTED = intersects[ 0 ].object;
                 INTERSECTED.material.program = programFill;
-
             }
-
         } else {
-
             if ( INTERSECTED ) INTERSECTED.material.program = programStroke;
-
             INTERSECTED = null;
-
         }
-
         renderer.render( scene, camera );
 
     }
+
+
+
 
 </script>
 
