@@ -25,14 +25,14 @@ using websocketpp::lib::placeholders::_2;
 using websocketpp::lib::bind;
 using websocketpp::connection_hdl;
 
-typedef websocketpp::client<websocketpp::config::asio_client> client;
+typedef websocketpp::client<websocketpp::config::asio_client> asio_client;
 typedef websocketpp::config::asio_client::message_type::ptr message_ptr;
 
 TC_NAMESPACE_BEGIN
 
 // implement websocket client
 class WebglPakua : public Pakua {
-    client pakua_client;
+    asio_client pakua_client;
     websocketpp::lib::shared_ptr<websocketpp::lib::thread> client;
     websocketpp::lib::error_code echo_ec;
 
@@ -64,13 +64,13 @@ public:
         pakua_client.clear_access_channels(websocketpp::log::alevel::frame_payload);
         pakua_client.init_asio();
         pakua_client.start_perpetual();
-        auto th = new websocketpp::lib::thread(&client::run, &pakua_client);
+        auto th = new websocketpp::lib::thread(&asio_client::run, &pakua_client);
         client.reset(th);
         printf("WebGL Pakua Client runs in new thread.\n");
         std::string uri = std::string("ws://localhost:") + std::to_string(port);
 
         // establish data connection
-        client::connection_ptr data_con = pakua_client.get_connection(uri.c_str(), echo_ec);
+        asio_client::connection_ptr data_con = pakua_client.get_connection(uri.c_str(), echo_ec);
         CHECK_EC
         data_hdl = data_con->get_handle();
         pakua_client.connect(data_con);
