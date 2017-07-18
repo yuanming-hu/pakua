@@ -38,6 +38,7 @@ TC_NAMESPACE_BEGIN
 using Vector = VectorND<3, real>;
 
 class WebglPakuaServer : public Task {
+    std::string output_path;
     server pakua_server;
     con_list monitor_connections;
     con_list taichi_connections;
@@ -57,10 +58,11 @@ class WebglPakuaServer : public Task {
         if (msg->get_payload() == std::string("monitor")) {
             monitor_connections.insert(hdl);
             printf("There are %lu monitors.\n", monitor_connections.size());
-        } else if (msg->get_payload() == std::string("taichi")) {
+        } else if (msg->get_payload().substr(0, 16) == std::string("frame_directory ")) {
+            output_path = msg->get_payload().substr(16);
             taichi_connections.insert(hdl);
             printf("There are %lu taichi clients.\n", taichi_connections.size());
-        } else if (msg->get_payload().size() == size * size * 4) {
+        } else if (monitor_connections.find(hdl) != monitor_connections.end()) {
             Array2D<Vector3> img(Vector2i(size, size));
             const std::string &str = msg->get_payload();
             for (int i = 0; i < size; i++) {
@@ -68,10 +70,11 @@ class WebglPakuaServer : public Task {
                     int r = (unsigned char)str[(i * size + j) * 4];
                     int g = (unsigned char)str[(i * size + j) * 4 + 1];
                     int b = (unsigned char)str[(i * size + j) * 4 + 2];
-                    img[i][j] = Vector(r, g, b);
+                    img[j][size - i - 1] = Vector(r, g, b);
                 }
             }
-            img.write("a.png");
+            P(output_path.c_str());
+            img.write(output_path);
         } else {
             for (auto &connection : monitor_connections) {
                 pakua_server.send(connection, msg->get_payload(), msg->get_opcode());

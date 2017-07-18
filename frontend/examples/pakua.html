@@ -205,7 +205,6 @@
         stats.update();
 
         var context = renderer.getContext();
-
         var img = context.getImageData(0, 0, width, height);
         ws.send(img.data.buffer);
     }

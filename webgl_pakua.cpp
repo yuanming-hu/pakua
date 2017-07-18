@@ -41,6 +41,7 @@ class WebglPakua : public Pakua {
     std::vector<real> triangle_buffer;
     websocketpp::connection_hdl data_hdl;
     int frame_count;
+    std::string frame_directory;
 
 #define CHECK_EC \
         if (echo_ec) { \
@@ -58,6 +59,7 @@ public:
 
     void initialize(const Config &config) {
         Pakua::initialize(config);
+        frame_directory = config.get_string("frame_directory");
         frame_count = 0;
         int port = config.get_int("port");
         pakua_client.clear_access_channels(websocketpp::log::alevel::frame_header);
@@ -112,6 +114,12 @@ public:
     }
 
     void start() {
+        std::string frame_count_str = std::to_string(frame_count);
+        std::string output_path = std::string("frame_directory ") + frame_directory +
+                std::string("/") + std::string(5 - frame_count_str.size(), '0') +
+                frame_count_str + std::string(".png");
+        pakua_client.send(data_hdl, output_path, websocketpp::frame::opcode::text, echo_ec);
+        CHECK_EC
     }
 
     void finish() {
