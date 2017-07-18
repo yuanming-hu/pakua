@@ -58,10 +58,11 @@ class WebglPakuaServer : public Task {
         if (msg->get_payload() == std::string("monitor")) {
             monitor_connections.insert(hdl);
             printf("There are %lu monitors.\n", monitor_connections.size());
-        } else if (msg->get_payload().substr(0, 16) == std::string("frame_directory ")) {
-            output_path = msg->get_payload().substr(16);
+        } else if (msg->get_payload() == std::string("monitor")) {
             taichi_connections.insert(hdl);
             printf("There are %lu taichi clients.\n", taichi_connections.size());
+        } else if (msg->get_payload().substr(0, 16) == std::string("frame_directory ")) {
+            output_path = msg->get_payload().substr(16);
         } else if (monitor_connections.find(hdl) != monitor_connections.end()) {
             Array2D<Vector3> img(Vector2i(size, size));
             const std::string &str = msg->get_payload();
