@@ -144,6 +144,7 @@ public:
     Array2D<Vector3> screenshot() {
         pakua_client.send(data_hdl, "screenshot", websocketpp::frame::opcode::text, echo_ec);
         CHECK_EC
+        return Array2D<Vector3>();
     }
 
 #undef CHECK_EC
