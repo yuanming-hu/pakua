@@ -54,7 +54,7 @@ class WebglPakuaServer : public Task {
     }
 
     void on_message(connection_hdl hdl, message_ptr msg) {
-        int size = 512;
+        int size = 1024;
         if (msg->get_payload() == std::string("monitor")) {
             monitor_connections.insert(hdl);
             printf("There are %lu monitors.\n", monitor_connections.size());
@@ -67,11 +67,12 @@ class WebglPakuaServer : public Task {
             Array2D<Vector3> img(Vector2i(size, size));
             const std::string &str = msg->get_payload();
             for (int i = 0; i < size; i++) {
+                int r, g, b;
                 for (int j = 0; j < size; j++) {
                     int r = (unsigned char)str[(i * size + j) * 4];
                     int g = (unsigned char)str[(i * size + j) * 4 + 1];
                     int b = (unsigned char)str[(i * size + j) * 4 + 2];
-                    img[j][size - i - 1] = Vector(r, g, b);
+                    img[j][size - i - 1] = Vector(r, g, b) * (1 / 255.0f);
                 }
             }
             P(output_path.c_str());

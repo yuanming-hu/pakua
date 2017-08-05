@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Pakua [八卦]</title>
+    <title>Taichi Visualizer</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <style>
@@ -55,6 +55,8 @@
     var last_rendered_frame = -2;
 
     function init() {
+        var pixel_ratio = 2;
+        window.devicePixelRatio = pixel_ratio;
         ws = new WebSocket('ws://localhost:9563/');
 
         ws.binaryType = 'arraybuffer';
@@ -142,8 +144,8 @@
         info.style.width = '100%';
         info.style.textAlign = 'center';
         info.style.color = '#10222B'
-        info.innerHTML = 'Pakua';
-        info.style.fontSize = '30px'
+        info.innerHTML = 'Taichi<br>&#x2630;&#x2631;&#x2632;&#x2633;&#x2634;&#x2635;&#x2636;&#x2637;';
+        info.style.fontSize = '20px'
         container.appendChild( info );
 
         aspect_ratio = window.innerWidth / window.innerHeight
@@ -164,9 +166,9 @@
         raycaster = new THREE.Raycaster();
         mouse = new THREE.Vector2();
 
-        renderer = new THREE.CanvasRenderer();
+        renderer = new THREE.CanvasRenderer({devicePixelRatio: pixel_ratio});
         renderer.setClearColor( 0xD9D1C7);
-        renderer.setPixelRatio( 1 );
+        renderer.setPixelRatio( pixel_ratio );
         renderer.setSize(width, height);
         container.appendChild( renderer.domElement );
         container.style.padding = '10px';
@@ -205,7 +207,7 @@
         stats.update();
 
         var context = renderer.getContext();
-        var img = context.getImageData(0, 0, width, height);
+        var img = context.getImageData(0, 0, width * window.devicePixelRatio, height * window.devicePixelRatio);
         ws.send(img.data.buffer);
     }
 
