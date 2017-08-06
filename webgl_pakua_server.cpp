@@ -56,7 +56,6 @@ class WebglPakuaServer : public Task {
     }
 
     void on_message(connection_hdl hdl, message_ptr msg) {
-        int size = 1024;
         if (msg->get_payload() == std::string("monitor")) {
             monitor_connections.insert(hdl);
             printf("There are %lu monitors.\n", monitor_connections.size());
@@ -66,15 +65,34 @@ class WebglPakuaServer : public Task {
         } else if (msg->get_payload().substr(0, 16) == std::string("frame_directory ")) {
             output_path = msg->get_payload().substr(16);
         } else if (monitor_connections.find(hdl) != monitor_connections.end()) {
-            Array2D<Vector3> img(Vector2i(size, size));
-            const std::string &str = msg->get_payload();
-            for (int i = 0; i < size; i++) {
+            unsigned char const *str = reinterpret_cast<unsigned char const *>(msg->get_payload().c_str());
+            Vector2i res;
+            res[0] = reinterpret_cast<uint16 const *>(str)[0];
+            res[1] = reinterpret_cast<uint16 const *>(str)[1];
+            P(res);
+            if (res[0] == 0) {
+                // Nothing.
+                return;
+            }
+
+            str += 4;
+
+            // '* 4' here for RGBA
+            if (msg->get_payload().size() != res[0] * res[1] * 4 + 4) {
+                printf("Warning: image data size does not match resolution! Data ignored.\n");
+                P(msg->get_payload().size());
+                P(res[0] * res[1] * 4 + 4);
+                return;
+            }
+
+            Array2D<Vector3> img(res);
+            for (int i = 0; i < res[0]; i++) {
                 int r, g, b;
-                for (int j = 0; j < size; j++) {
-                    int r = (unsigned char)str[(i * size + j) * 4];
-                    int g = (unsigned char)str[(i * size + j) * 4 + 1];
-                    int b = (unsigned char)str[(i * size + j) * 4 + 2];
-                    img[j][size - i - 1] = Vector(r, g, b) * (1 / 255.0f);
+                for (int j = 0; j < res[1]; j++) {
+                    int r = str[(j * res[0] + i) * 4];
+                    int g = str[(j * res[0] + i) * 4 + 1];
+                    int b = str[(j * res[0] + i) * 4 + 2];
+                    img[i][res[1] - j - 1] = Vector(r, g, b) * (1 / 255.0f);
                 }
             }
             img.write(output_path);
@@ -87,7 +105,7 @@ class WebglPakuaServer : public Task {
 
     void run() override {
         th = std::thread([]() {
-            std::cout << "Server starting at http://localhost:1116 " << std::endl;
+            std::cout << "*** Server starting at http://localhost:1116 ***\n" << std::endl;
             std::string dir = std::string(std::getenv("TAICHI_ROOT_DIR")) + std::string("taichi/pakua/frontend");
             chdir(dir.c_str());
             system("python -m SimpleHTTPServer 1116");

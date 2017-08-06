@@ -40,6 +40,7 @@ class WebglPakua : public Pakua {
     std::vector<real> point_buffer;
     std::vector<real> line_buffer;
     std::vector<real> triangle_buffer;
+    std::vector<real> resolution_buffer;
     websocketpp::connection_hdl data_hdl;
     int frame_count;
     std::string frame_directory;
@@ -69,7 +70,7 @@ public:
         pakua_client.start_perpetual();
         auto th = new websocketpp::lib::thread(&asio_client::run, &pakua_client);
         client.reset(th);
-        printf("WebGL Pakua Client runs in new thread.\n");
+        printf("WebGL Pakua Client runs in a new thread.\n");
         std::string uri = std::string("ws://localhost:") + std::to_string(port);
 
         // establish data connection
@@ -78,6 +79,13 @@ public:
         data_hdl = data_con->get_handle();
         pakua_client.connect(data_con);
         pakua_client.set_message_handler(bind(&WebglPakua::on_message, this, ::_1, ::_2));
+        set_resolution(Vector2i(1024, 1024));
+    }
+
+    void set_resolution(Vector2i res) override {
+        resolution_buffer.resize(2);
+        resolution_buffer[0] = res[0];
+        resolution_buffer[1] = res[1];
     }
 
     void on_message(connection_hdl hdl, message_ptr msg) {
@@ -134,11 +142,12 @@ public:
             CHECK_EC
             buffer.clear();
         };
+        std::vector<real> frame_id_buffer;
+        frame_id_buffer.push_back(frame_count);
         send_single_kind("point", point_buffer);
         send_single_kind("line", line_buffer);
         send_single_kind("triangle", triangle_buffer);
-        std::vector<real> frame_id_buffer;
-        frame_id_buffer.push_back(frame_count);
+        send_single_kind("resolution", resolution_buffer);
         send_single_kind("frame_id", frame_id_buffer);
 
         frame_count += 1;
