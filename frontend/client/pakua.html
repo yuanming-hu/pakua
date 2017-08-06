@@ -47,7 +47,7 @@
     var index2id = Array();
 
     init();
-    animate();
+
 
     var ws;
 
@@ -207,18 +207,28 @@
     }
 
     function animate() {
-        requestAnimationFrame(animate);
-        if (current_frame == last_rendered_frame) {
-            return;
-        } else {
+        if (current_frame != last_rendered_frame) {
             last_rendered_frame = current_frame;
+            render();
+            var context = renderer.getContext();
+            var img = context.getImageData(0, 0, width * window.devicePixelRatio, height * window.devicePixelRatio);
+            ws.send(img.data.buffer);
         }
-        render();
-        stats.update();
+        window.w.postMessage(0);
+    }
 
-        var context = renderer.getContext();
-        var img = context.getImageData(0, 0, width * window.devicePixelRatio, height * window.devicePixelRatio);
-        ws.send(img.data.buffer);
+    window.animate = animate;
+
+    if(typeof(Worker) !== "undefined") {
+        w = new Worker("animate_worker.js");
+        w.onmessage = function(event) {
+            console.log("message from WebWorker")
+            window.animate();
+        };
+        w.postMessage(0);
+        window.w = w;
+    } else {
+        window.alert("Error: no WebWorker support.");
     }
 
     var radius = 600;
