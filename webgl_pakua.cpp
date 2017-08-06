@@ -2,6 +2,7 @@
     Taichi - Physically based Computer Graphics Library
 
     Copyright (c) 2017 Yu Fang <squarefk@gmail.com>
+                  2017 Yuanming Hu <yuanmhu@gmail.com>
 
     All rights reserved. Use of this source code is governed by
     the MIT license as written in the LICENSE file.
@@ -57,7 +58,7 @@ public:
         client->join();
     }
 
-    void initialize(const Config &config) {
+    void initialize(const Config &config) override {
         Pakua::initialize(config);
         frame_directory = config.get_string("frame_directory");
         frame_count = 0;
@@ -86,24 +87,26 @@ public:
         }
     }
 
-    void add_point(Vector pos, Vector color) {
+    void add_point(Vector pos, Vector color, real size = 1.0f) override {
         for (int i = 0; i < 3; i++)
             point_buffer.push_back(pos[i]);
         for (int i = 0; i < 3; i++)
             point_buffer.push_back(color[i]);
+        point_buffer.push_back(size);
     }
 
-    void add_line(const std::vector<Vector> &pos_v, const std::vector<Vector> &color_v) {
+    void add_line(const std::vector<Vector> &pos_v, const std::vector<Vector> &color_v, real width = 1.0f) override {
         int number = (int)pos_v.size();
         for (int i = 0; i < number; i++) {
             for (int j = 0; j < 3; j++)
                 line_buffer.push_back(pos_v[i][j]);
             for (int j = 0; j < 3; j++)
                 line_buffer.push_back(color_v[i][j]);
+            line_buffer.push_back(width);
         }
     }
 
-    void add_triangle(const std::vector<Vector> &pos_v, const std::vector<Vector> &color_v) {
+    void add_triangle(const std::vector<Vector> &pos_v, const std::vector<Vector> &color_v) override {
         int number = (int)pos_v.size();
         for (int i = 0; i < number; i++) {
             for (int j = 0; j < 3; j++)
@@ -113,16 +116,16 @@ public:
         }
     }
 
-    void start() {
+    void start() override {
         std::string frame_count_str = std::to_string(frame_count);
         std::string output_path = std::string("frame_directory ") + frame_directory +
-                std::string("/") + std::string(5 - frame_count_str.size(), '0') +
-                frame_count_str + std::string(".png");
+                                  std::string("/") + std::string(5 - frame_count_str.size(), '0') +
+                                  frame_count_str + std::string(".png");
         pakua_client.send(data_hdl, output_path, websocketpp::frame::opcode::text, echo_ec);
         CHECK_EC
     }
 
-    void finish() {
+    void finish() override {
         auto send_single_kind = [&](const std::string &kind, std::vector<float> &buffer) {
             pakua_client.send(data_hdl, kind, websocketpp::frame::opcode::text, echo_ec);
             CHECK_EC
