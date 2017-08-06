@@ -13,6 +13,7 @@
 
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
+#include <cstdlib>
 #include <thread>
 #include <set>
 #include <mutex>
@@ -42,6 +43,7 @@ class WebglPakuaServer : public Task {
     server pakua_server;
     con_list monitor_connections;
     con_list taichi_connections;
+    std::thread th;
 
     void on_open(connection_hdl hdl) {
     }
@@ -75,7 +77,6 @@ class WebglPakuaServer : public Task {
                     img[j][size - i - 1] = Vector(r, g, b) * (1 / 255.0f);
                 }
             }
-            P(output_path.c_str());
             img.write(output_path);
         } else {
             for (auto &connection : monitor_connections) {
@@ -85,6 +86,12 @@ class WebglPakuaServer : public Task {
     }
 
     void run() override {
+        th = std::thread([]() {
+            std::cout << "Server starting at http://localhost:1116 " << std::endl;
+            std::string dir = std::string(std::getenv("TAICHI_ROOT_DIR")) + std::string("taichi/pakua/frontend");
+            chdir(dir.c_str());
+            system("python -m SimpleHTTPServer 1116");
+        });
         int port = 9563;
         try {
             // Set logging settings
